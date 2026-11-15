@@ -1,0 +1,28 @@
+//@version=6
+indicator("India FII Flow Companion (external feed required)", shorttitle="FII Flow Companion", overlay=false)
+
+// TradingView Pine cannot call the NSE website/API directly.
+// This companion becomes live only if you have a TradingView data vendor
+// that publishes FII and DII net-flow series as chart symbols.
+
+fiiSymbol = input.symbol("NSE:NIFTY", "FII net-flow symbol (replace with vendor symbol)")
+diiSymbol = input.symbol("NSE:NIFTY", "DII net-flow symbol (replace with vendor symbol)")
+fiiScale = input.float(1.0, "FII scale factor", tooltip="Set to 1 if vendor series is already in ₹ crore.")
+diiScale = input.float(1.0, "DII scale factor")
+
+fii = request.security(fiiSymbol, "D", close) * fiiScale
+dii = request.security(diiSymbol, "D", close) * diiScale
+
+fii5 = math.sum(fii, 5)
+fii20 = math.sum(fii, 20)
+
+hline(0, "Zero", color=color.gray)
+plot(fii, "FII daily net (₹ Cr)", style=plot.style_columns, color=fii >= 0 ? color.lime : color.red)
+plot(dii, "DII daily net (₹ Cr)", color=color.blue, linewidth=2)
+plot(fii5, "FII 5-session cumulative", color=color.orange, linewidth=2)
+plot(fii20, "FII 20-session cumulative", color=color.fuchsia, linewidth=2)
+
+bullAccum = fii5 > 0 and fii20 > 0
+bearDist = fii5 < 0 and fii20 < 0
+alertcondition(bullAccum and not bullAccum[1], "FII accumulation", "FII 5-session and 20-session flows turned positive.")
+alertcondition(bearDist and not bearDist[1], "FII distribution", "FII 5-session and 20-session flows turned negative.")
